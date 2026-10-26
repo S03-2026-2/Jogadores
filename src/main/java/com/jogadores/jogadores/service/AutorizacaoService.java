@@ -1,26 +1,43 @@
-import org.springframework.stereotype.Service;
-
 @Service
 public class AutorizacaoService {
 
-    private final JogadorAutorizacaoRepository jogadorAutorizacaoRepository;
+    private final TokenProvider tokenProvider;
+    private final AutorizacaoRepository autorizacaoRepository;
 
     public AutorizacaoService(
-            JogadorAutorizacaoRepository jogadorAutorizacaoRepository) {
+            TokenProvider tokenProvider,
+            AutorizacaoRepository autorizacaoRepository) {
 
-        this.jogadorAutorizacaoRepository = jogadorAutorizacaoRepository;
+        this.tokenProvider = tokenProvider;
+        this.autorizacaoRepository = autorizacaoRepository;
     }
 
-    public boolean verificarAutorizacao(
-            int jogadorId,
-            String acao) {
+    public AutorizacaoResponse verificarAutorizacao(
+            String token,
+            Acao acao) {
 
-        return jogadorAutorizacaoRepository
-                .findByJogador_IdAndAutorizacao_Acao(
-                        jogadorId,
-                        acao
-                )
-                .map(JogadorAutorizacao::isPermitida)
-                .orElse(false);
+        if (!tokenProvider.validarToken(token)) {
+            return new AutorizacaoResponse(
+                    0,
+                    acao,
+                    false
+            );
+        }
+
+        int jogadorId =
+                tokenProvider.extrairJogadorId(token);
+
+        Papel papel =
+                tokenProvider.extrairPapel(token);
+
+        boolean permitida =
+                autorizacaoRepository
+                        .existsByPapelAndAcao(papel, acao);
+
+        return new AutorizacaoResponse(
+                jogadorId,
+                acao,
+                permitida
+        );
     }
 }

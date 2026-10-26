@@ -6,6 +6,15 @@ public class Autorizacao {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String acao;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Papel papel;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Acao acao;
+
+    // construtores
+    // getters
+    // setters
 }
