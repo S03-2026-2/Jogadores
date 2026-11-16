@@ -1,3 +1,13 @@
+package com.jogadores.jogadores.service;
+
+import com.jogadores.jogadores.dto.AutorizacaoResponse;
+import com.jogadores.jogadores.model.Acao;
+import com.jogadores.jogadores.model.Papel;
+import com.jogadores.jogadores.repository.AutorizacaoRepository;
+import com.jogadores.jogadores.security.TokenProvider;
+
+import org.springframework.stereotype.Service;
+
 @Service
 public class AutorizacaoService {
 

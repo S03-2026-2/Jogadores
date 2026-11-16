@@ -16,6 +16,8 @@ import javax.crypto.SecretKey;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Component
 public class JwtTokenProvider implements TokenProvider {
@@ -87,6 +89,16 @@ public class JwtTokenProvider implements TokenProvider {
         );
 
         return Papel.valueOf(papel);
+    }
+
+    @Override
+    public LocalDateTime extrairEmitidoEm(String token) {
+        Claims claims = extrairClaims(token);
+
+        return LocalDateTime.ofInstant(
+                claims.getIssuedAt().toInstant(),
+                ZoneId.systemDefault()
+        );
     }
 
     private Claims extrairClaims(String token) {

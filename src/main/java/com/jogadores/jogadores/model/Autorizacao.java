@@ -1,5 +1,14 @@
+package com.jogadores.jogadores.model;
+
+import jakarta.persistence.*;
+
 @Entity
-@Table(name = "autorizacoes")
+@Table(
+    name = "autorizacoes",
+    uniqueConstraints = @UniqueConstraint(
+        columnNames = {"papel", "acao"}
+    )
+)
 public class Autorizacao {
 
     @Id
@@ -15,6 +24,25 @@ public class Autorizacao {
     private Acao acao;
 
     // construtores
+    protected Autorizacao() {
+    }
+
+    public Autorizacao(Papel papel, Acao acao) {
+        this.papel = papel;
+        this.acao = acao;
+    }
+
     // getters
-    // setters
+    public Long getId() {
+        return id;
+    }
+
+    public Papel getPapel() {
+        return papel;
+    }
+
+    public Acao getAcao() {
+        return acao;
+    }
+
 }
