@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 @Component
 public class BrokerEventPublisher implements EventPublisher {
@@ -20,7 +19,7 @@ public class BrokerEventPublisher implements EventPublisher {
 
     public BrokerEventPublisher(RestClient.Builder builder, @Value("${broker.url}") String brokerUrl) {
         this.restClient = builder.build();
-        this.brokerUrl = brokerUrl;
+        this.brokerUrl = brokerUrl.replaceAll("/+$", "");
     }
 
     @Override
@@ -32,8 +31,8 @@ public class BrokerEventPublisher implements EventPublisher {
                     .body(Map.of("topico", evento.topico(), "dados", evento))
                     .retrieve()
                     .toBodilessEntity();
-        } catch (RestClientException e) {
-            // O cadastro não depende do Broker
+        } catch (RuntimeException e) {
+            // Qualquer falha do Broker (rede, status, URL inválida) nunca bloqueia o cadastro
             log.warn("Falha ao publicar evento no tópico {}: {}", evento.topico(), e.getMessage());
         }
     }

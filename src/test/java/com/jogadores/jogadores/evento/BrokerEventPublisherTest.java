@@ -61,4 +61,23 @@ class BrokerEventPublisherTest {
 
         assertDoesNotThrow(() -> publisher.publicar(evento));
     }
+
+    @Test
+    void barraFinalNaUrlNaoDuplicaNoCaminho() {
+        RestClient.Builder builder = RestClient.builder();
+        server = MockRestServiceServer.bindTo(builder).build();
+        publisher = new BrokerEventPublisher(builder, "http://broker/");
+        server.expect(requestTo("http://broker/publicar")).andRespond(withAccepted());
+
+        publisher.publicar(evento);
+
+        server.verify();
+    }
+
+    @Test
+    void urlInvalidaDoBrokerNaoInterrompeOCadastro() {
+        BrokerEventPublisher semEsquema = new BrokerEventPublisher(RestClient.builder(), "localhost:8000");
+
+        assertDoesNotThrow(() -> semEsquema.publicar(evento));
+    }
 }
