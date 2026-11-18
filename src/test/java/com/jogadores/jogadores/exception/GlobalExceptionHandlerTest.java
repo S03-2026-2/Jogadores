@@ -14,9 +14,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,8 +36,37 @@ class GlobalExceptionHandlerTest {
         }
     }
 
+    @ResponseStatus(code = HttpStatus.CONFLICT, reason = "Conflito anotado")
+    static class ConflitoComMotivo extends RuntimeException {
+        ConflitoComMotivo() {
+            super("detalhe interno");
+        }
+    }
+
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    static class FalhaAnotada extends RuntimeException {
+        FalhaAnotada() {
+            super("detalhe interno");
+        }
+    }
+
     @RestController
     static class RotasDeTeste {
+        @GetMapping("/motivo")
+        void motivo() {
+            throw new ConflitoComMotivo();
+        }
+
+        @GetMapping("/falha-anotada")
+        void falhaAnotada() {
+            throw new FalhaAnotada();
+        }
+
+        @GetMapping("/sem-motivo")
+        void semMotivo() {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
         @GetMapping("/anotada")
         void anotada() {
             throw new NaoAutenticado("Token inválido ou expirado");
@@ -157,6 +186,7 @@ class GlobalExceptionHandlerTest {
     void erroInesperadoVira500SemDetalhes() throws Exception {
         mvc.perform(get("/inesperado"))
                 .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.erro").value("INTERNAL_SERVER_ERROR"))
                 .andExpect(jsonPath("$.mensagem").value("Erro interno no servidor"));
     }
 
@@ -179,5 +209,26 @@ class GlobalExceptionHandlerTest {
         mvc.perform(get("/credenciais"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.mensagem").value("Não autenticado"));
+    }
+
+    @Test
+    void statusAnotadoPrefereOMotivoDaAnotacao() throws Exception {
+        mvc.perform(get("/motivo"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value("Conflito anotado"));
+    }
+
+    @Test
+    void statusAnotado5xxNaoVazaMensagem() throws Exception {
+        mvc.perform(get("/falha-anotada"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.mensagem").value("Erro interno no servidor"));
+    }
+
+    @Test
+    void responseStatusExceptionSemMotivoTemMensagem() throws Exception {
+        mvc.perform(get("/sem-motivo"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.mensagem").isNotEmpty());
     }
 }

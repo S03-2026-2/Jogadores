@@ -5,15 +5,15 @@ import java.util.NoSuchElementException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.beans.TypeMismatchException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -77,15 +77,24 @@ public class GlobalExceptionHandler {
         // Resolve @ResponseStatus de forma genérica, sem depender de classes de outros pacotes
         ResponseStatus anotacao = AnnotatedElementUtils.findMergedAnnotation(ex.getClass(), ResponseStatus.class);
         if (anotacao != null) {
-            return responder(anotacao.code(), ex.getMessage());
+            // 5xx anotado nunca expõe a mensagem da exceção
+            if (anotacao.code().is5xxServerError()) {
+                return responder(anotacao.code(), "Erro interno no servidor");
+            }
+            String motivo = anotacao.reason().isEmpty() ? ex.getMessage() : anotacao.reason();
+            return responder(anotacao.code(), motivo);
         }
         log.error("Erro inesperado", ex);
         return responder(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno no servidor");
     }
 
     private ResponseEntity<ErroResponse> responder(HttpStatusCode status, String mensagem) {
-        ErroResponse corpo = new ErroResponse(
-                status.value(), HttpStatus.valueOf(status.value()).name(), mensagem, LocalDateTime.now());
+        HttpStatus http = HttpStatus.resolve(status.value());
+        String erro = http != null ? http.name() : HttpStatus.INTERNAL_SERVER_ERROR.name();
+        if (mensagem == null || mensagem.isBlank()) {
+            mensagem = http != null ? http.getReasonPhrase() : "Erro interno no servidor";
+        }
+        ErroResponse corpo = new ErroResponse(status.value(), erro, mensagem, LocalDateTime.now());
         return ResponseEntity.status(status).body(corpo);
     }
 }
