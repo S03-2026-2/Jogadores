@@ -10,6 +10,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,6 +29,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErroResponse> corpoInvalido(HttpMessageNotReadableException ex) {
         return responder(HttpStatus.BAD_REQUEST, "Corpo da requisição inválido");
+    }
+
+    // Ex.: id não numérico na rota; sem isto cairia no catch-all (500)
+    @ExceptionHandler(TypeMismatchException.class)
+    public ResponseEntity<ErroResponse> tipoInvalido(TypeMismatchException ex) {
+        return responder(HttpStatus.BAD_REQUEST, "Parâmetro com tipo inválido");
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErroResponse> acessoNegado(AccessDeniedException ex) {
+        return responder(HttpStatus.FORBIDDEN, "Acesso negado");
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErroResponse> naoAutenticado(AuthenticationException ex) {
+        return responder(HttpStatus.UNAUTHORIZED, "Não autenticado");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

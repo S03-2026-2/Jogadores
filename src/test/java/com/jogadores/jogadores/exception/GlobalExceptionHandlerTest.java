@@ -14,10 +14,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -68,6 +71,20 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/inesperado")
         void inesperado() {
             throw new RuntimeException("senha do banco: 123");
+        }
+
+        @GetMapping("/tipo/{id}")
+        void tipo(@PathVariable Long id) {
+        }
+
+        @GetMapping("/negado")
+        void negado() {
+            throw new AccessDeniedException("detalhe interno");
+        }
+
+        @GetMapping("/credenciais")
+        void credenciais() {
+            throw new BadCredentialsException("detalhe interno");
         }
 
         @PostMapping("/corpo")
@@ -141,5 +158,26 @@ class GlobalExceptionHandlerTest {
         mvc.perform(get("/inesperado"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.mensagem").value("Erro interno no servidor"));
+    }
+
+    @Test
+    void tipoInvalidoNaRotaVira400() throws Exception {
+        mvc.perform(get("/tipo/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value("BAD_REQUEST"));
+    }
+
+    @Test
+    void accessDeniedVira403() throws Exception {
+        mvc.perform(get("/negado"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.mensagem").value("Acesso negado"));
+    }
+
+    @Test
+    void authenticationExceptionVira401() throws Exception {
+        mvc.perform(get("/credenciais"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.mensagem").value("Não autenticado"));
     }
 }
