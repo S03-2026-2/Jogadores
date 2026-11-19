@@ -107,7 +107,7 @@ class AutenticacaoServiceTest {
         service.redefinirSenha(new JogadorAutenticado(1, Papel.JOGADOR),
                 new RedefinirSenhaRequest("atual", "nova"));
 
-        verify(jogador).alterarSenha("atual", "nova", codificador);
+        verify(jogador).alterarSenha("nova", codificador);
         verify(repository).save(jogador);
     }
 
@@ -119,7 +119,7 @@ class AutenticacaoServiceTest {
         assertThrows(AutenticacaoException.class, () -> service.redefinirSenha(
                 new JogadorAutenticado(1, Papel.JOGADOR), new RedefinirSenhaRequest("errada", "nova")));
 
-        verify(jogador, never()).alterarSenha(any(), any(), any());
+        verify(jogador, never()).alterarSenha(any(), any());
         verify(repository, never()).save(any());
     }
 
