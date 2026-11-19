@@ -64,7 +64,7 @@ public class AutenticacaoService {
                 .filter(j -> j.senhaConfere(req.senhaAtual(), codificadorSenha))
                 .orElseThrow(() -> new AutenticacaoException("Senha atual incorreta"));
 
-        jogador.alterarSenha(req.senhaAtual(), req.novaSenha(), codificadorSenha);
+        jogador.alterarSenha(req.novaSenha(), codificadorSenha);
         jogadorRepository.save(jogador);
     }
 

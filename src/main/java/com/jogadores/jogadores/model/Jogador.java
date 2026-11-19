@@ -13,6 +13,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+
 @Entity
 @Table(name = "jogadores")
 public class Jogador {
@@ -59,6 +62,15 @@ public class Jogador {
 
     public void alterarSenha(String novaSenha, CodificadorSenha codificador) {
         credencial.redefinir(novaSenha, codificador);
+    }
+
+    // Tokens emitidos antes da última troca de senha deixam de valer.
+    // O token guarda a emissão em milissegundos (claim "emitidoEmMs"), então a
+    // comparação é em milissegundos: um token emitido no mesmo segundo, mas antes
+    // da troca, é recusado.
+    public boolean aceitaTokenEmitidoEm(LocalDateTime emitidoEm) {
+        return credencial.isAtiva()
+                && !emitidoEm.isBefore(credencial.getDataAtualizacao().truncatedTo(ChronoUnit.MILLIS));
     }
 
     public Integer getId() {
