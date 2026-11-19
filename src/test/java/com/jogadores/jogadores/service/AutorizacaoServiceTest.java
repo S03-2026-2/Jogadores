@@ -4,7 +4,8 @@ import com.jogadores.jogadores.dto.AutorizacaoResponse;
 import com.jogadores.jogadores.model.Acao;
 import com.jogadores.jogadores.model.Papel;
 import com.jogadores.jogadores.repository.AutorizacaoRepository;
-import com.jogadores.jogadores.security.TokenProvider;
+import com.jogadores.jogadores.security.JogadorAutenticado;
+import com.jogadores.jogadores.exception.AutenticacaoException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,32 +19,28 @@ class AutorizacaoServiceTest {
 
     private static final String TOKEN = "token";
 
-    private TokenProvider tokenProvider;
+    private AutenticacaoService autenticacaoService;
     private AutorizacaoRepository repository;
     private AutorizacaoService service;
 
     @BeforeEach
     void configurar() {
-        tokenProvider = mock(TokenProvider.class);
+        autenticacaoService = mock(AutenticacaoService.class);
         repository = mock(AutorizacaoRepository.class);
-        service = new AutorizacaoService(tokenProvider, repository);
+        service = new AutorizacaoService(autenticacaoService, repository);
     }
 
     private void tokenDe(int jogadorId, Papel papel) {
-        when(tokenProvider.validarToken(TOKEN)).thenReturn(true);
-        when(tokenProvider.extrairJogadorId(TOKEN)).thenReturn(jogadorId);
-        when(tokenProvider.extrairPapel(TOKEN)).thenReturn(papel);
+        when(autenticacaoService.autenticarToken(TOKEN)).thenReturn(new JogadorAutenticado(jogadorId, papel));
     }
 
     @Test
     void tokenInvalidoGera401() {
-        when(tokenProvider.validarToken(TOKEN)).thenReturn(false);
-
-        var erro = assertThrows(ResponseStatusException.class,
-                () -> service.verificarAutorizacao(TOKEN, Acao.PROPOR_TROCA, null));
-
+        when(autenticacaoService.autenticarToken(TOKEN)).thenThrow(new AutenticacaoException("Token inválido ou expirado"));
+        var erro = assertThrows(ResponseStatusException.class,() -> service.verificarAutorizacao(TOKEN, Acao.PROPOR_TROCA, null));
         assertEquals(HttpStatus.UNAUTHORIZED, erro.getStatusCode());
     }
+
 
     @Test
     void tokenAusenteGera401() {
@@ -92,5 +89,30 @@ class AutorizacaoServiceTest {
         when(repository.existsByPapelAndAcao(Papel.ADMIN, Acao.ATUALIZAR_DADOS)).thenReturn(true);
 
         assertTrue(service.verificarAutorizacao(TOKEN, Acao.ATUALIZAR_DADOS, 2).permitida());
+    }
+
+    @Test
+    void acoesIndividuaisExigemJogadorAlvo() {
+        tokenDe(9, Papel.ADMIN);
+
+        Acao[] acoes = {
+            Acao.CONSULTAR_DADOS,
+            Acao.ATUALIZAR_DADOS,
+            Acao.REDEFINIR_SENHA
+        };
+
+        for (Acao acao : acoes) {
+            var erro = assertThrows(ResponseStatusException.class, () -> service.verificarAutorizacao(TOKEN, acao, null));
+            assertEquals(HttpStatus.BAD_REQUEST, erro.getStatusCode());
+        }
+    }
+
+    @Test
+    void acaoAusenteGera400() {
+        tokenDe(1, Papel.JOGADOR);
+
+        var erro = assertThrows(ResponseStatusException.class,() -> service.verificarAutorizacao(TOKEN, null, null));
+
+        assertEquals(HttpStatus.BAD_REQUEST, erro.getStatusCode());
     }
 }

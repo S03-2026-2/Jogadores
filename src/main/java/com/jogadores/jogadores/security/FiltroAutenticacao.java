@@ -1,6 +1,7 @@
 package com.jogadores.jogadores.security;
 
-import com.jogadores.jogadores.model.Papel;
+import com.jogadores.jogadores.exception.AutenticacaoException;
+import com.jogadores.jogadores.service.AutenticacaoService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,21 +18,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Elo da cadeia de filtros do Spring Security (Chain of Responsibility).
- * Se a requisição traz um JWT válido, registra o jogador como autenticado
- * e passa adiante. Se não traz, apenas passa adiante: quem decide se a rota
- * exige autenticação é o SecurityConfig, que responde 401 nesse caso.
- */
 @Component
 public class FiltroAutenticacao extends OncePerRequestFilter {
 
     private static final String PREFIXO_BEARER = "Bearer ";
 
-    private final TokenProvider tokenProvider;
+    private final AutenticacaoService autenticacaoService;
 
-    public FiltroAutenticacao(TokenProvider tokenProvider) {
-        this.tokenProvider = tokenProvider;
+    public FiltroAutenticacao(
+            AutenticacaoService autenticacaoService) {
+        this.autenticacaoService = autenticacaoService;
     }
 
     @Override
@@ -40,21 +36,34 @@ public class FiltroAutenticacao extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain chain) throws ServletException, IOException {
 
-        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String authorization =
+                request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (authorization != null && authorization.startsWith(PREFIXO_BEARER)) {
-            String token = authorization.substring(PREFIXO_BEARER.length());
+        SecurityContextHolder.clearContext();
 
-            if (tokenProvider.validarToken(token)) {
-                int jogadorId = tokenProvider.extrairJogadorId(token);
-                Papel papel = tokenProvider.extrairPapel(token);
+        if (authorization != null
+                && authorization.startsWith(PREFIXO_BEARER)) {
 
-                var autenticacao = new UsernamePasswordAuthenticationToken(
-                        jogadorId,
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + papel.name())));
+            String token = authorization.substring(
+                    PREFIXO_BEARER.length());
 
-                SecurityContextHolder.getContext().setAuthentication(autenticacao);
+            try {
+                JogadorAutenticado jogador =
+                        autenticacaoService.autenticarToken(token);
+
+                var autenticacao =
+                        new UsernamePasswordAuthenticationToken(
+                                jogador.jogadorId(),
+                                null,
+                                List.of(new SimpleGrantedAuthority(
+                                        "ROLE_" + jogador.papel().name()))
+                        );
+
+                SecurityContextHolder.getContext()
+                        .setAuthentication(autenticacao);
+
+            } catch (AutenticacaoException e) {
+                SecurityContextHolder.clearContext();
             }
         }
 
