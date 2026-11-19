@@ -22,6 +22,10 @@ import java.time.ZoneId;
 @Component
 public class JwtTokenProvider implements TokenProvider {
 
+    // O "iat" padrão do JWT só guarda segundos. Este claim guarda a emissão em
+    // milissegundos, para a revogação por troca de senha não ter janela de 1 s.
+    private static final String CLAIM_EMITIDO_EM_MS = "emitidoEmMs";
+
     private final SecretKey chaveSecreta;
     private final long expiracaoMinutos;
 
@@ -48,6 +52,7 @@ public class JwtTokenProvider implements TokenProvider {
                 .subject(String.valueOf(jogadorId))
                 .claim("papel", papel.name())
                 .issuedAt(Date.from(agora))
+                .claim(CLAIM_EMITIDO_EM_MS, agora.toEpochMilli())
                 .expiration(Date.from(expiracao))
                 .signWith(chaveSecreta)
                 .compact();
@@ -95,10 +100,13 @@ public class JwtTokenProvider implements TokenProvider {
     public LocalDateTime extrairEmitidoEm(String token) {
         Claims claims = extrairClaims(token);
 
-        return LocalDateTime.ofInstant(
-                claims.getIssuedAt().toInstant(),
-                ZoneId.systemDefault()
-        );
+        Long emitidoEmMs = claims.get(CLAIM_EMITIDO_EM_MS, Long.class);
+
+        Instant emitidoEm = emitidoEmMs != null
+                ? Instant.ofEpochMilli(emitidoEmMs)
+                : claims.getIssuedAt().toInstant();
+
+        return LocalDateTime.ofInstant(emitidoEm, ZoneId.systemDefault());
     }
 
     private Claims extrairClaims(String token) {

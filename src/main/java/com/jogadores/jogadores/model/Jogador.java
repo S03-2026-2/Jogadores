@@ -65,10 +65,12 @@ public class Jogador {
     }
 
     // Tokens emitidos antes da última troca de senha deixam de valer.
-    // O JWT guarda a emissão em segundos, então a comparação também é em segundos.
+    // O token guarda a emissão em milissegundos (claim "emitidoEmMs"), então a
+    // comparação é em milissegundos: um token emitido no mesmo segundo, mas antes
+    // da troca, é recusado.
     public boolean aceitaTokenEmitidoEm(LocalDateTime emitidoEm) {
         return credencial.isAtiva()
-                && !emitidoEm.isBefore(credencial.getDataAtualizacao().truncatedTo(ChronoUnit.SECONDS));
+                && !emitidoEm.isBefore(credencial.getDataAtualizacao().truncatedTo(ChronoUnit.MILLIS));
     }
 
     public Integer getId() {

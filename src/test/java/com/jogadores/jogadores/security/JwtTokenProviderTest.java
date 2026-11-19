@@ -94,5 +94,17 @@ class JwtTokenProviderTest {
 
         assertFalse(emitidoEm.isAfter(depois));
     }
-}
 
+    @Test
+    void emissaoDoTokenPreservaMilissegundos() {
+        LocalDateTime antes = LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+
+        String token = tokenProvider.gerarToken(1, Papel.JOGADOR);
+
+        LocalDateTime depois = LocalDateTime.now();
+        LocalDateTime emitidoEm = tokenProvider.extrairEmitidoEm(token);
+
+        assertFalse(emitidoEm.isBefore(antes));
+        assertFalse(emitidoEm.isAfter(depois));
+    }
+}
