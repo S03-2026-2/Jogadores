@@ -1,3 +1,5 @@
+package com.jogadores.jogadores.service;
+
 public interface CodificadorSenha {
 
     String codificar(String senha);
