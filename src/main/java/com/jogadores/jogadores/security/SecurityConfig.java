@@ -10,6 +10,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 
 /**
  * Rotas públicas: cadastro, login, validação de token e documentação.
@@ -37,5 +38,14 @@ public class SecurityConfig {
                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterBefore(filtroAutenticacao, UsernamePasswordAuthenticationFilter.class)
                 .build();
+    }
+
+    @Bean
+    public FilterRegistrationBean<FiltroAutenticacao> registroFiltroAutenticacao(FiltroAutenticacao filtro) {
+
+        FilterRegistrationBean<FiltroAutenticacao> registro = new FilterRegistrationBean<>(filtro);
+
+        registro.setEnabled(false);
+        return registro;
     }
 }
